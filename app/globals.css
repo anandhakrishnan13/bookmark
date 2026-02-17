@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Raindrop.io-inspired sidebar colors */
+  --sidebar: hsl(0 0% 99%);
+  --sidebar-foreground: hsl(210 10% 23%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(214 32% 91%);
+  --sidebar-accent-foreground: hsl(210 10% 23%);
+  --sidebar-border: hsl(210 18% 87%);
+  --sidebar-ring: hsl(217 91% 60%);
+  
+  /* Sidebar width configuration */
+  --sidebar-width: 16rem; /* ~256px when expanded */
+  --sidebar-width-icon: 3rem; /* ~48px when collapsed */
 }
 
 @theme inline {
@@ -10,6 +25,14 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +46,16 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.dark {
+  /* Raindrop.io-inspired dark mode */
+  --sidebar: hsl(220 13% 13%);
+  --sidebar-foreground: hsl(210 17% 82%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(215 14% 20%);
+  --sidebar-accent-foreground: hsl(210 17% 82%);
+  --sidebar-border: hsl(215 14% 17%);
+  --sidebar-ring: hsl(217 91% 60%);
 }
