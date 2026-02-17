@@ -10,20 +10,30 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Plus } from 'lucide-react'
 import { validateBookmark } from '@/utils/validators'
+import type { Collection } from '@/utils/types'
 
 interface AddBookmarkProps {
-  onAdd: (title: string, url: string) => Promise<{ success: boolean; error?: string }>
+  onAdd: (title: string, url: string, collectionId?: string | undefined) => Promise<{ success: boolean; error?: string | undefined }>
+  collections?: Collection[] | undefined
 }
 
-export function AddBookmark({ onAdd }: AddBookmarkProps) {
+export function AddBookmark({ onAdd, collections }: AddBookmarkProps) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
-  const [errors, setErrors] = useState<{ title?: string; url?: string }>({})
+  const [collectionId, setCollectionId] = useState<string>('none')
+  const [errors, setErrors] = useState<{ title?: string | undefined; url?: string | undefined }>({})
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,7 +49,8 @@ export function AddBookmark({ onAdd }: AddBookmarkProps) {
     setSubmitting(true)
     setErrors({})
 
-    const result = await onAdd(title, url)
+    const selectedCollection = collectionId === 'none' ? undefined : collectionId
+    const result = await onAdd(title, url, selectedCollection)
 
     setSubmitting(false)
 
@@ -47,6 +58,7 @@ export function AddBookmark({ onAdd }: AddBookmarkProps) {
       // Reset form and close dialog
       setTitle('')
       setUrl('')
+      setCollectionId('none')
       setOpen(false)
     } else {
       setErrors({ url: result.error || 'Failed to add bookmark' })
@@ -59,6 +71,7 @@ export function AddBookmark({ onAdd }: AddBookmarkProps) {
       // Reset form when closing
       setTitle('')
       setUrl('')
+      setCollectionId('none')
       setErrors({})
     }
   }
@@ -111,6 +124,26 @@ export function AddBookmark({ onAdd }: AddBookmarkProps) {
                 <p className="text-sm text-destructive">{errors.url}</p>
               )}
             </div>
+            {collections && collections.length > 0 && (
+              <div className="grid gap-2">
+                <label htmlFor="collection" className="text-sm font-medium">
+                  Collection (optional)
+                </label>
+                <Select value={collectionId} onValueChange={setCollectionId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No collection" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No collection</SelectItem>
+                    {collections.map((col) => (
+                      <SelectItem key={col.id} value={col.id}>
+                        {col.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button type="submit" disabled={submitting}>

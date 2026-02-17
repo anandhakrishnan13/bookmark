@@ -277,8 +277,8 @@ Agents MUST read `README.md` before making changes.
 ---
 
 ## 15. Strict UI & Component Rules (shadcn/ui)
-
 - shadcn/ui components MUST be used for all UI elements
+- Read https://ui.shadcn.com/docs/components/base first
 - No custom HTML UI unless shadcn does not provide an equivalent
 - Tailwind is allowed **only** for layout and spacing
 - MCP-installed shadcn components are the single UI source

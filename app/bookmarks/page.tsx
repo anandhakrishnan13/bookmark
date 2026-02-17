@@ -1,123 +1,292 @@
-'use client'
+"use client";
 
-import { useAuth } from '@/hooks/useAuth'
-import { useBookmarks } from '@/hooks/useBookmarks'
-import { useRealtimeBookmarks } from '@/hooks/useRealtimeBookmarks'
-import { BookmarkList } from '@/components/BookmarkList'
-import { AddBookmark } from '@/components/AddBookmark'
-import { Button } from '@/components/ui/button'
-import { AppSidebar } from '@/components/layout/AppSidebar'
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { Separator } from '@/components/ui/separator'
-import { Input } from '@/components/ui/input'
-import { Search } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useCallback, useState } from 'react'
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useBookmarks } from "@/hooks/useBookmarks";
+import { useCollections } from "@/hooks/useCollections";
+import { useBookmarkCounts } from "@/hooks/useBookmarkCounts";
+import { useRealtimeBookmarks } from "@/hooks/useRealtimeBookmarks";
+import { AppSidebar } from "@/components/layout/AppSidebar";
+import { BookmarkList } from "@/components/BookmarkList";
+import { AddBookmark } from "@/components/AddBookmark";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Search, Menu, LogIn } from "lucide-react";
+import type { Collection } from "@/utils/types";
+
+type ActiveFilter = "all" | "favorites" | "recent" | "trash" | string;
 
 export default function BookmarksPage() {
-  const router = useRouter()
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
+  const userId = user?.id ?? null;
+
+  // Filter state
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Data hooks
   const {
     bookmarks,
     loading: bookmarksLoading,
     addBookmark,
-    deleteBookmark,
-    refetch,
-  } = useBookmarks(user?.id || null)
+    toggleFavorite,
+    moveToTrash,
+    restoreFromTrash,
+    permanentDelete,
+    refetch: refetchBookmarks,
+  } = useBookmarks(userId, activeFilter);
 
-  const [searchQuery, setSearchQuery] = useState('')
+  const {
+    collections,
+    loading: collectionsLoading,
+    createCollection,
+    renameCollection,
+    deleteCollection,
+    getBookmarkCount,
+  } = useCollections(userId ?? undefined);
 
-  // Set up realtime subscription
+  const { counts, refetchCounts } = useBookmarkCounts(userId);
+
+  // Realtime subscription - refetch both bookmarks and counts on changes
+  const handleRealtimeRefetch = useCallback(() => {
+    refetchBookmarks();
+    refetchCounts();
+  }, [refetchBookmarks, refetchCounts]);
+
   useRealtimeBookmarks({
-    userId: user?.id || null,
-    onRefetch: refetch,
-  })
+    userId,
+    onRefetch: handleRealtimeRefetch,
+  });
 
+  // Compute collection counts
+  const [collectionCounts, setCollectionCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    async function loadCollectionCounts() {
+      const countsMap: Record<string, number> = {};
+      for (const collection of collections) {
+        countsMap[collection.id] = await getBookmarkCount(collection.id);
+      }
+      setCollectionCounts(countsMap);
+    }
+    if (collections.length > 0) {
+      loadCollectionCounts();
+    } else {
+      setCollectionCounts({});
+    }
+  }, [collections, getBookmarkCount]);
+
+  // Filter bookmarks by search query (client-side text filter on top of server-side filter)
+  const filteredBookmarks = useMemo(() => {
+    if (!searchQuery.trim()) return bookmarks;
+    const query = searchQuery.toLowerCase();
+    return bookmarks.filter(
+      (b) =>
+        b.title.toLowerCase().includes(query) ||
+        b.url.toLowerCase().includes(query)
+    );
+  }, [bookmarks, searchQuery]);
+
+  // Heading based on active filter
+  const heading = useMemo(() => {
+    switch (activeFilter) {
+      case "all":
+        return "All Bookmarks";
+      case "favorites":
+        return "Favorites";
+      case "recent":
+        return "Recent";
+      case "trash":
+        return "Trash";
+      default: {
+        // Collection name
+        const collection = collections.find((c) => c.id === activeFilter);
+        return collection ? collection.name : "Bookmarks";
+      }
+    }
+  }, [activeFilter, collections]);
+
+  const isTrashView = activeFilter === "trash";
+
+  // Handle adding bookmark with optional collection
+  const handleAddBookmark = useCallback(
+    async (
+      title: string,
+      url: string,
+      collectionId?: string | null
+    ): Promise<{ success: boolean; error?: string | undefined }> => {
+      return addBookmark(title, url, collectionId ?? undefined);
+    },
+    [addBookmark]
+  );
+
+  // Handle delete (soft delete for normal view)
   const handleDelete = useCallback(
     async (id: string) => {
-      await deleteBookmark(id)
+      if (isTrashView) {
+        await permanentDelete(id);
+      } else {
+        await moveToTrash(id);
+      }
+      refetchCounts();
     },
-    [deleteBookmark]
-  )
+    [isTrashView, permanentDelete, moveToTrash, refetchCounts]
+  );
 
-  // Redirect to home if not authenticated
-  if (!authLoading && !user) {
-    router.push('/')
-    return null
-  }
+  const handleToggleFavorite = useCallback(
+    async (id: string, currentState: boolean) => {
+      await toggleFavorite(id);
+      refetchCounts();
+    },
+    [toggleFavorite, refetchCounts]
+  );
 
+  const handleRestore = useCallback(
+    async (id: string) => {
+      await restoreFromTrash(id);
+      refetchCounts();
+    },
+    [restoreFromTrash, refetchCounts]
+  );
+
+  const handlePermanentDelete = useCallback(
+    async (id: string) => {
+      await permanentDelete(id);
+      refetchCounts();
+    },
+    [permanentDelete, refetchCounts]
+  );
+
+  const handleFilterChange = useCallback((filter: string) => {
+    setActiveFilter(filter);
+    setSearchQuery("");
+    setMobileMenuOpen(false);
+  }, []);
+
+  // Sidebar component (shared between desktop and mobile)
+  const sidebarContent = (
+    <AppSidebar
+      userEmail={user?.email ?? undefined}
+      onSignOut={signOut}
+      activeFilter={activeFilter}
+      onFilterChange={handleFilterChange}
+      collections={collections}
+      collectionCounts={collectionCounts}
+      navCounts={counts}
+      collectionsLoading={collectionsLoading}
+      onCreateCollection={createCollection}
+      onRenameCollection={renameCollection}
+      onDeleteCollection={deleteCollection}
+    />
+  );
+
+  // Auth loading state
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
       </div>
-    )
+    );
   }
 
-  // Filter bookmarks based on search query
-  const filteredBookmarks = bookmarks.filter(
-    (bookmark) =>
-      bookmark.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bookmark.url.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Not authenticated
+  if (!user) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center max-w-md mx-auto p-8">
+          <h1 className="text-3xl font-bold mb-2">Smart Bookmarks</h1>
+          <p className="text-muted-foreground mb-8">
+            Organize, collect, and manage your bookmarks with ease.
+          </p>
+          <Button onClick={signInWithGoogle} size="lg" className="gap-2">
+            <LogIn className="h-5 w-5" />
+            Sign in with Google
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <SidebarProvider defaultOpen={true} className="flex h-screen bg-background">
-      <AppSidebar collapsible="offcanvas" />
-      
-      <div className="w-full flex flex-col">
-        {/* Header */}
-        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          
-          {/* Search Bar */}
-          <div className="flex flex-1 items-center gap-2">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search bookmarks..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
+    <div className="flex h-screen bg-background">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-64 flex-shrink-0 border-r border-border">
+        {sidebarContent}
+      </aside>
 
-          {/* User Actions */}
-          <div className="flex items-center gap-2">
-            <AddBookmark onAdd={addBookmark} />
-            <Separator orientation="vertical" className="h-4" />
-            <span className="text-sm text-muted-foreground hidden md:inline">
-              {user?.email}
-            </span>
-            <Button variant="outline" size="sm" onClick={signOut}>
-              Sign Out
-            </Button>
-          </div>
-        </header>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Bar */}
+        <header className="flex items-center gap-3 border-b border-border px-4 py-3 md:px-6">
+          {/* Mobile hamburger */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-0">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              {sidebarContent}
+            </SheetContent>
+          </Sheet>
 
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-auto p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-semibold">All Bookmarks</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {filteredBookmarks.length} bookmark{filteredBookmarks.length !== 1 ? 's' : ''}
-                  {searchQuery && ` matching "${searchQuery}"`}
-                </p>
-              </div>
-            </div>
+          {/* Page heading */}
+          <h1 className="text-xl font-semibold truncate">{heading}</h1>
 
-            <BookmarkList
-              bookmarks={filteredBookmarks}
-              onDelete={handleDelete}
-              loading={bookmarksLoading}
+          <div className="flex-1" />
+
+          {/* Search */}
+          <div className="relative max-w-xs w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search bookmarks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
             />
           </div>
-        </main>
-      </div>
-    </SidebarProvider>
-  )
+
+          {/* Add Bookmark - hidden in trash view */}
+          {!isTrashView && (
+            <AddBookmark
+              onAdd={handleAddBookmark}
+              collections={collections}
+            />
+          )}
+        </header>
+
+        {/* Bookmark list */}
+        <div className="flex-1 overflow-auto p-4 md:p-6">
+          <BookmarkList
+            bookmarks={filteredBookmarks}
+            onDelete={handleDelete}
+            onToggleFavorite={handleToggleFavorite}
+            onRestore={handleRestore}
+            onPermanentDelete={handlePermanentDelete}
+            collections={collections}
+            loading={bookmarksLoading}
+            isTrashView={isTrashView}
+            emptyMessage={
+              searchQuery
+                ? "No bookmarks match your search."
+                : isTrashView
+                ? "Trash is empty."
+                : activeFilter === "favorites"
+                ? "No favorite bookmarks yet. Star some bookmarks to see them here."
+                : activeFilter === "recent"
+                ? "No recent bookmarks."
+                : "No bookmarks yet. Add your first bookmark above."
+            }
+          />
+        </div>
+      </main>
+    </div>
+  );
 }

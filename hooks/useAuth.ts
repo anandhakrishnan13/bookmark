@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import type { User, Session } from '@/utils/types'
-import { isDemoMode, mockUser, mockSession, simulateDelay } from '@/utils/mockData'
 
 interface AuthState {
   user: User | null
@@ -19,19 +18,6 @@ export function useAuth() {
   })
 
   useEffect(() => {
-    // Demo mode - use mock data
-    if (isDemoMode()) {
-      simulateDelay(800).then(() => {
-        setAuthState({
-          user: mockUser,
-          session: mockSession,
-          loading: false,
-        })
-      })
-      return
-    }
-
-    // Production mode - use Supabase
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAuthState({
@@ -79,18 +65,6 @@ export function useAuth() {
   }, [])
 
   const signInWithGoogle = async () => {
-    // Demo mode - simulate sign in
-    if (isDemoMode()) {
-      await simulateDelay(500)
-      setAuthState({
-        user: mockUser,
-        session: mockSession,
-        loading: false,
-      })
-      return
-    }
-
-    // Production mode - use Supabase
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -103,18 +77,6 @@ export function useAuth() {
   }
 
   const signOut = async () => {
-    // Demo mode - simulate sign out
-    if (isDemoMode()) {
-      await simulateDelay(300)
-      setAuthState({
-        user: null,
-        session: null,
-        loading: false,
-      })
-      return
-    }
-
-    // Production mode - use Supabase
     const { error } = await supabase.auth.signOut()
     if (error) {
       console.error('Error signing out:', error.message)

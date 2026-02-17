@@ -5,16 +5,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  /* Raindrop.io-inspired sidebar colors */
-  --sidebar: hsl(0 0% 99%);
-  --sidebar-foreground: hsl(210 10% 23%);
+  --sidebar: #171717;
+  --sidebar-foreground: #ffffff;
   --sidebar-primary: hsl(217 91% 60%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
   --sidebar-accent: hsl(214 32% 91%);
   --sidebar-accent-foreground: hsl(210 10% 23%);
   --sidebar-border: hsl(210 18% 87%);
   --sidebar-ring: hsl(217 91% 60%);
-  
+
   /* Sidebar width configuration */
   --sidebar-width: 16rem; /* ~256px when expanded */
   --sidebar-width-icon: 3rem; /* ~48px when collapsed */

@@ -3,7 +3,6 @@
 import { useEffect, useCallback } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import { isDemoMode } from '@/utils/mockData'
 
 interface UseRealtimeBookmarksProps {
   userId: string | null
@@ -16,9 +15,6 @@ export function useRealtimeBookmarks({
 }: UseRealtimeBookmarksProps) {
   const subscribeToBookmarks = useCallback(() => {
     if (!userId) return null
-    
-    // Demo mode - skip realtime subscription
-    if (isDemoMode()) return null
 
     const channel: RealtimeChannel = supabase
       .channel('bookmarks-changes')
