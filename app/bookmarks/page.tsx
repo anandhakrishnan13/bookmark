@@ -9,6 +9,7 @@ import { useRealtimeBookmarks } from "@/hooks/useRealtimeBookmarks";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BookmarkList } from "@/components/BookmarkList";
 import { AddBookmark } from "@/components/AddBookmark";
+import { ChatBubble } from "@/components/chat/ChatBubble";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -444,6 +445,9 @@ export default function BookmarksPage() {
           />
         </div>
       </main>
+
+      {/* AI Chat Bubble */}
+      <ChatBubble bookmarks={bookmarks} />
     </div>
   );
 }
