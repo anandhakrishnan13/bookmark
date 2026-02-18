@@ -1,6 +1,6 @@
 import { google } from '@ai-sdk/google';
 //  import { xai } from '@ai-sdk/xai';
-import { streamText, type UIMessage, convertToModelMessages } from 'ai';
+import { streamText, smoothStream, type UIMessage, convertToModelMessages } from 'ai';
 import { fetchSiteContent } from '@/lib/fetchSiteContent';
 
 export async function POST(req: Request) {
@@ -46,9 +46,10 @@ ${siteContent}
 Remember: Only discuss this specific website. Do not make up information not found in the content above.`;
 
   const result = streamText({
-    model:  google('gemini-2.5-flash'),
+    model: google('gemini-2.5-flash'),
     system: systemPrompt,
     messages: await convertToModelMessages(messages),
+    experimental_transform: smoothStream({ chunking: 'word' }),
   });
 
   return result.toUIMessageStreamResponse();

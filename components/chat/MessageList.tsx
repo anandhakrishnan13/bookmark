@@ -22,10 +22,21 @@ function getMessageText(message: UIMessage): string {
 
 export function MessageList({ messages, isStreaming }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const lastMessageLength = useRef(0)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    // Track text changes for smooth scrolling during streaming
+    const lastMsg = messages[messages.length - 1]
+    if (lastMsg) {
+      const currentLen = getMessageText(lastMsg).length
+      if (currentLen !== lastMessageLength.current) {
+        lastMessageLength.current = currentLen
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, isStreaming])
 
   if (messages.length === 0) {
     return (
@@ -42,9 +53,10 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
   return (
     <ScrollArea className="flex-1 p-4">
       <div className="space-y-4">
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const isUser = message.role === 'user'
           const text = getMessageText(message)
+          const isLastAssistant = !isUser && index === messages.length - 1
 
           return (
             <div
@@ -67,11 +79,18 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
                     : 'bg-muted text-foreground'
                 }`}
               >
-                {text || (isStreaming && message.role === 'assistant' ? (
-                  <span className="inline-flex gap-1">
-                    <span className="animate-bounce">·</span>
-                    <span className="animate-bounce" style={{ animationDelay: '0.1s' }}>·</span>
-                    <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>·</span>
+                {text ? (
+                  <>
+                    {text}
+                    {isStreaming && isLastAssistant && (
+                      <span className="inline-block w-1.5 h-4 ml-0.5 -mb-0.5 bg-current animate-pulse" />
+                    )}
+                  </>
+                ) : (isStreaming && message.role === 'assistant' ? (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '0.15s' }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '0.3s' }} />
                   </span>
                 ) : null)}
               </div>

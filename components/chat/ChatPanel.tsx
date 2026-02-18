@@ -36,6 +36,7 @@ export function ChatPanel({ bookmarks, onClose }: ChatPanelProps) {
 
   const { messages, sendMessage, setMessages, status, error } = useChat({
     transport,
+    experimental_throttle: 40,
     onError: (err) => {
       console.error('[ChatPanel] useChat error:', err)
     },

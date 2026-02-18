@@ -25,19 +25,19 @@
   --popover: #ffffff;
   --popover-foreground: #171717;
 
-  /* Sidebar */
-  --sidebar: #171717;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: hsl(217 91% 60%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(214 32% 91%);
-  --sidebar-accent-foreground: hsl(210 10% 23%);
-  --sidebar-border: hsl(210 18% 87%);
-  --sidebar-ring: hsl(217 91% 60%);
+  /* Sidebar – light mode matches main background */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #171717;
+  --sidebar-primary: #171717;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #171717;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #171717;
 
   /* Sidebar width configuration */
-  --sidebar-width: 16rem; /* ~256px when expanded */
-  --sidebar-width-icon: 3rem; /* ~48px when collapsed */
+  --sidebar-width: 16rem;
+  --sidebar-width-icon: 3rem;
 }
 
 @theme inline {
@@ -72,30 +72,6 @@
   --color-sidebar: var(--sidebar);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --primary: #fafafa;
-    --primary-foreground: #171717;
-    --secondary: #27272a;
-    --secondary-foreground: #fafafa;
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa;
-    --accent: #27272a;
-    --accent-foreground: #fafafa;
-    --destructive: #dc2626;
-    --destructive-foreground: #fafafa;
-    --border: #27272a;
-    --input: #27272a;
-    --ring: #d4d4d8;
-    --card: #0a0a0a;
-    --card-foreground: #ededed;
-    --popover: #0a0a0a;
-    --popover-foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -124,13 +100,13 @@ body {
   --popover: #0a0a0a;
   --popover-foreground: #ededed;
 
-  /* Raindrop.io-inspired dark mode */
-  --sidebar: hsl(220 13% 13%);
-  --sidebar-foreground: hsl(210 17% 82%);
-  --sidebar-primary: hsl(217 91% 60%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(215 14% 20%);
-  --sidebar-accent-foreground: hsl(210 17% 82%);
-  --sidebar-border: hsl(215 14% 17%);
-  --sidebar-ring: hsl(217 91% 60%);
+  /* Sidebar dark */
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #ededed;
+  --sidebar-primary: #fafafa;
+  --sidebar-primary-foreground: #171717;
+  --sidebar-accent: #27272a;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #27272a;
+  --sidebar-ring: #d4d4d8;
 }

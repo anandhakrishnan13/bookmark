@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { useCollections } from "@/hooks/useCollections";
@@ -27,11 +28,12 @@ import {
 import {
   Search,
   Menu,
-  LogIn,
   ArrowUpDown,
+  Link as LinkIcon,
   LayoutGrid,
   List,
 } from "lucide-react";
+import { isValidUrl } from "@/utils/validators";
 import type { Collection } from "@/utils/types";
 
 type ActiveFilter = "all" | "favorites" | "recent" | "trash" | string;
@@ -40,6 +42,7 @@ type ViewMode = "grid" | "list";
 
 export default function BookmarksPage() {
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
+  const router = useRouter();
   const userId = user?.id ?? null;
 
   // Filter state
@@ -260,6 +263,80 @@ export default function BookmarksPage() {
     }
   }, [sortBy]);
 
+  // Drag-and-drop state and handlers
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  const extractUrlFromDrop = useCallback((e: React.DragEvent): string | null => {
+    // Try text/uri-list first (dragged links)
+    const uriList = e.dataTransfer.getData('text/uri-list');
+    if (uriList) {
+      const firstUrl = uriList.split('\n').find(line => !line.startsWith('#') && line.trim());
+      if (firstUrl && isValidUrl(firstUrl.trim())) return firstUrl.trim();
+    }
+    // Try text/plain (address bar, plain text URLs)
+    const text = e.dataTransfer.getData('text/plain');
+    if (text && isValidUrl(text.trim())) return text.trim();
+    return null;
+  }, []);
+
+  const extractTitleFromDrop = useCallback((e: React.DragEvent, url: string): string => {
+    // Try to get link text from HTML data
+    const html = e.dataTransfer.getData('text/html');
+    if (html) {
+      const match = html.match(/<a[^>]*>([^<]+)<\/a>/i);
+      const linkText = match?.[1];
+      if (linkText?.trim()) return linkText.trim();
+    }
+    // Fallback: derive from URL
+    try {
+      const parsed = new URL(url);
+      const path = parsed.pathname.replace(/\/$/, '');
+      if (path && path !== '/') {
+        return decodeURIComponent(path.split('/').pop() || parsed.hostname);
+      }
+      return parsed.hostname;
+    } catch {
+      return url;
+    }
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes('text/uri-list') || e.dataTransfer.types.includes('text/plain')) {
+      setIsDraggingOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDraggingOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    dragCounterRef.current = 0;
+
+    const url = extractUrlFromDrop(e);
+    if (!url) return;
+
+    const title = extractTitleFromDrop(e, url);
+    await handleAddBookmark(title, url);
+  }, [extractUrlFromDrop, extractTitleFromDrop, handleAddBookmark]);
+
   // Sidebar component (shared between desktop and mobile)
   const sidebarContent = (
     <AppSidebar
@@ -277,6 +354,13 @@ export default function BookmarksPage() {
     />
   );
 
+  // Not authenticated - redirect to login page
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/');
+    }
+  }, [authLoading, user, router]);
+
   // Auth loading state
   if (authLoading) {
     return (
@@ -289,19 +373,12 @@ export default function BookmarksPage() {
     );
   }
 
-  // Not authenticated
   if (!user) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <div className="text-center max-w-md mx-auto p-8">
-          <h1 className="text-3xl font-bold mb-2">Smart Bookmarks</h1>
-          <p className="text-muted-foreground mb-8">
-            Organize, collect, and manage your bookmarks with ease.
-          </p>
-          <Button onClick={signInWithGoogle} size="lg" className="gap-2">
-            <LogIn className="h-5 w-5" />
-            Sign in with Google
-          </Button>
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+          <p className="mt-4 text-muted-foreground">Redirecting...</p>
         </div>
       </div>
     );
@@ -315,7 +392,22 @@ export default function BookmarksPage() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main
+        className="flex-1 flex flex-col overflow-hidden relative"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {/* Drag-and-drop overlay */}
+        {isDraggingOver && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
+            <div className="flex flex-col items-center gap-2 text-primary">
+              <LinkIcon className="h-10 w-10" />
+              <p className="text-lg font-semibold">Drop link to bookmark it</p>
+            </div>
+          </div>
+        )}
         {/* Top Bar */}
         <header className="flex items-center gap-3 border-b border-border px-4 py-3 md:px-6">
           {/* Mobile hamburger */}
@@ -418,8 +510,25 @@ export default function BookmarksPage() {
           )}
         </header>
 
-        {/* Bookmark list */}
-        <div className="flex-1 overflow-auto p-4 md:p-6">
+        {/* Bookmark list with drag-and-drop zone */}
+        <div
+          className={`flex-1 overflow-auto p-4 md:p-6 relative transition-colors ${
+            isDraggingOver ? 'bg-primary/5' : ''
+          }`}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {isDraggingOver && (
+            <div className="absolute inset-4 border-2 border-dashed border-primary rounded-xl flex items-center justify-center bg-primary/5 z-10 pointer-events-none">
+              <div className="text-center">
+                <LinkIcon className="h-10 w-10 text-primary mx-auto mb-2" />
+                <p className="text-lg font-medium text-primary">Drop link to bookmark</p>
+                <p className="text-sm text-muted-foreground">Release to save this URL</p>
+              </div>
+            </div>
+          )}
           <BookmarkList
             bookmarks={filteredBookmarks}
             onDelete={handleDelete}
