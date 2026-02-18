@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -26,15 +26,24 @@ import type { Collection } from '@/utils/types'
 interface AddBookmarkProps {
   onAdd: (title: string, url: string, collectionId?: string | undefined) => Promise<{ success: boolean; error?: string | undefined }>
   collections?: Collection[] | undefined
+  defaultCollectionId?: string | undefined
+  hideCollectionSelector?: boolean | undefined
 }
 
-export function AddBookmark({ onAdd, collections }: AddBookmarkProps) {
+export function AddBookmark({ onAdd, collections, defaultCollectionId, hideCollectionSelector }: AddBookmarkProps) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
-  const [collectionId, setCollectionId] = useState<string>('none')
+  const [collectionId, setCollectionId] = useState<string>(defaultCollectionId ?? 'none')
   const [errors, setErrors] = useState<{ title?: string | undefined; url?: string | undefined }>({})
   const [submitting, setSubmitting] = useState(false)
+
+  // Sync with defaultCollectionId when user navigates between collections
+  useEffect(() => {
+    if (!open) {
+      setCollectionId(defaultCollectionId ?? 'none')
+    }
+  }, [defaultCollectionId, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,7 +80,7 @@ export function AddBookmark({ onAdd, collections }: AddBookmarkProps) {
       // Reset form when closing
       setTitle('')
       setUrl('')
-      setCollectionId('none')
+      setCollectionId(defaultCollectionId ?? 'none')
       setErrors({})
     }
   }
@@ -124,7 +133,7 @@ export function AddBookmark({ onAdd, collections }: AddBookmarkProps) {
                 <p className="text-sm text-destructive">{errors.url}</p>
               )}
             </div>
-            {collections && collections.length > 0 && (
+            {collections && collections.length > 0 && !hideCollectionSelector && (
               <div className="grid gap-2">
                 <label htmlFor="collection" className="text-sm font-medium">
                   Collection (optional)

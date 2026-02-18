@@ -11,11 +11,31 @@ import { BookmarkList } from "@/components/BookmarkList";
 import { AddBookmark } from "@/components/AddBookmark";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { Search, Menu, LogIn } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Search,
+  Menu,
+  LogIn,
+  ArrowUpDown,
+  LayoutGrid,
+  List,
+} from "lucide-react";
 import type { Collection } from "@/utils/types";
 
 type ActiveFilter = "all" | "favorites" | "recent" | "trash" | string;
+type SortBy = "date-desc" | "date-asc" | "alpha-asc" | "alpha-desc";
+type ViewMode = "grid" | "list";
 
 export default function BookmarksPage() {
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
@@ -25,6 +45,8 @@ export default function BookmarksPage() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>("date-desc");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   // Data hooks
   const {
@@ -35,6 +57,7 @@ export default function BookmarksPage() {
     moveToTrash,
     restoreFromTrash,
     permanentDelete,
+    moveToCollection,
     refetch: refetchBookmarks,
   } = useBookmarks(userId, activeFilter);
 
@@ -61,7 +84,9 @@ export default function BookmarksPage() {
   });
 
   // Compute collection counts
-  const [collectionCounts, setCollectionCounts] = useState<Record<string, number>>({});
+  const [collectionCounts, setCollectionCounts] = useState<
+    Record<string, number>
+  >({});
 
   useEffect(() => {
     async function loadCollectionCounts() {
@@ -78,16 +103,49 @@ export default function BookmarksPage() {
     }
   }, [collections, getBookmarkCount]);
 
-  // Filter bookmarks by search query (client-side text filter on top of server-side filter)
+  // Filter bookmarks by search query, then sort
   const filteredBookmarks = useMemo(() => {
-    if (!searchQuery.trim()) return bookmarks;
-    const query = searchQuery.toLowerCase();
-    return bookmarks.filter(
-      (b) =>
-        b.title.toLowerCase().includes(query) ||
-        b.url.toLowerCase().includes(query)
-    );
-  }, [bookmarks, searchQuery]);
+    let result = bookmarks;
+
+    // Text search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (b) =>
+          b.title.toLowerCase().includes(query) ||
+          b.url.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort
+    const sorted = [...result];
+    switch (sortBy) {
+      case "date-desc":
+        sorted.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        break;
+      case "date-asc":
+        sorted.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        break;
+      case "alpha-asc":
+        sorted.sort((a, b) =>
+          a.title.localeCompare(b.title, undefined, { sensitivity: "base" })
+        );
+        break;
+      case "alpha-desc":
+        sorted.sort((a, b) =>
+          b.title.localeCompare(a.title, undefined, { sensitivity: "base" })
+        );
+        break;
+    }
+
+    return sorted;
+  }, [bookmarks, searchQuery, sortBy]);
 
   // Heading based on active filter
   const heading = useMemo(() => {
@@ -101,7 +159,6 @@ export default function BookmarksPage() {
       case "trash":
         return "Trash";
       default: {
-        // Collection name
         const collection = collections.find((c) => c.id === activeFilter);
         return collection ? collection.name : "Bookmarks";
       }
@@ -110,16 +167,30 @@ export default function BookmarksPage() {
 
   const isTrashView = activeFilter === "trash";
 
-  // Handle adding bookmark with optional collection
+  // Determine if current filter is a collection ID
+  const activeCollectionId = useMemo(() => {
+    if (
+      activeFilter !== "all" &&
+      activeFilter !== "favorites" &&
+      activeFilter !== "recent" &&
+      activeFilter !== "trash"
+    ) {
+      return activeFilter;
+    }
+    return null;
+  }, [activeFilter]);
+
+  // Handle adding bookmark - auto-assign to current collection if viewing one
   const handleAddBookmark = useCallback(
     async (
       title: string,
       url: string,
       collectionId?: string | null
     ): Promise<{ success: boolean; error?: string | undefined }> => {
-      return addBookmark(title, url, collectionId ?? undefined);
+      const resolvedCollectionId = collectionId ?? activeCollectionId;
+      return addBookmark(title, url, resolvedCollectionId ?? undefined);
     },
-    [addBookmark]
+    [addBookmark, activeCollectionId]
   );
 
   // Handle delete (soft delete for normal view)
@@ -136,7 +207,7 @@ export default function BookmarksPage() {
   );
 
   const handleToggleFavorite = useCallback(
-    async (id: string, currentState: boolean) => {
+    async (id: string, _currentState: boolean) => {
       await toggleFavorite(id);
       refetchCounts();
     },
@@ -159,11 +230,34 @@ export default function BookmarksPage() {
     [permanentDelete, refetchCounts]
   );
 
+  const handleMoveToCollection = useCallback(
+    async (bookmarkId: string, collectionId: string | null) => {
+      await moveToCollection(bookmarkId, collectionId);
+      refetchBookmarks();
+      refetchCounts();
+    },
+    [moveToCollection, refetchBookmarks, refetchCounts]
+  );
+
   const handleFilterChange = useCallback((filter: string) => {
     setActiveFilter(filter);
     setSearchQuery("");
     setMobileMenuOpen(false);
   }, []);
+
+  // Sort label for button
+  const sortLabel = useMemo(() => {
+    switch (sortBy) {
+      case "date-desc":
+        return "Newest first";
+      case "date-asc":
+        return "Oldest first";
+      case "alpha-asc":
+        return "A \u2192 Z";
+      case "alpha-desc":
+        return "Z \u2192 A";
+    }
+  }, [sortBy]);
 
   // Sidebar component (shared between desktop and mobile)
   const sidebarContent = (
@@ -253,11 +347,72 @@ export default function BookmarksPage() {
             />
           </div>
 
+          {/* Sort dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 hidden sm:flex">
+                <ArrowUpDown className="h-4 w-4" />
+                <span className="hidden lg:inline">{sortLabel}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-44 bg-white dark:bg-zinc-900 text-black dark:text-white shadow-lg rounded-lg"
+            >
+              <DropdownMenuItem
+                onClick={() => setSortBy("date-desc")}
+                className={sortBy === "date-desc" ? "bg-accent" : ""}
+              >
+                Newest first
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSortBy("date-asc")}
+                className={sortBy === "date-asc" ? "bg-accent" : ""}
+              >
+                Oldest first
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSortBy("alpha-asc")}
+                className={sortBy === "alpha-asc" ? "bg-accent" : ""}
+              >
+                A &rarr; Z
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setSortBy("alpha-desc")}
+                className={sortBy === "alpha-desc" ? "bg-accent" : ""}
+              >
+                Z &rarr; A
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* View toggle */}
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8 rounded-r-none"
+              onClick={() => setViewMode("grid")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8 rounded-l-none"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+
           {/* Add Bookmark - hidden in trash view */}
           {!isTrashView && (
             <AddBookmark
               onAdd={handleAddBookmark}
               collections={collections}
+              defaultCollectionId={activeCollectionId ?? undefined}
+              hideCollectionSelector={activeCollectionId !== null}
             />
           )}
         </header>
@@ -270,9 +425,11 @@ export default function BookmarksPage() {
             onToggleFavorite={handleToggleFavorite}
             onRestore={handleRestore}
             onPermanentDelete={handlePermanentDelete}
+            onMoveToCollection={handleMoveToCollection}
             collections={collections}
             loading={bookmarksLoading}
             isTrashView={isTrashView}
+            viewMode={viewMode}
             emptyMessage={
               searchQuery
                 ? "No bookmarks match your search."

@@ -17,8 +17,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import type { Collection } from '@/utils/types'
 import { useState } from 'react'
 import Image from 'next/image'
 
@@ -28,6 +32,8 @@ interface BookmarkItemProps {
   onToggleFavorite?: ((id: string, currentState: boolean) => Promise<void>) | undefined
   onRestore?: ((id: string) => Promise<void>) | undefined
   onPermanentDelete?: ((id: string) => Promise<void>) | undefined
+  onMoveToCollection?: ((id: string, collectionId: string | null) => Promise<void>) | undefined
+  collections?: Collection[] | undefined
   collectionName?: string | undefined
   isTrashView?: boolean | undefined
 }
@@ -38,6 +44,8 @@ export function BookmarkItem({
   onToggleFavorite,
   onRestore,
   onPermanentDelete,
+  onMoveToCollection,
+  collections,
   collectionName,
   isTrashView = false,
 }: BookmarkItemProps) {
@@ -111,73 +119,110 @@ export function BookmarkItem({
           </div>
         )}
 
-        {/* Hover Actions */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-          {!isTrashView && (
+        {/* Actions - always visible */}
+        <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
+          {/* Favorite star */}
+          {!isTrashView ? (
             <Button
-              variant="secondary"
+              variant="ghost"
               size="icon"
-              className="h-8 w-8 bg-background/95 backdrop-blur-sm"
+              className="h-8 w-8 bg-background/80 backdrop-blur-sm shadow-sm hover:bg-background"
               onClick={handleToggleFavorite}
             >
               <Star
                 className={`h-4 w-4 ${
                   bookmark.is_favorite
                     ? 'fill-yellow-400 text-yellow-400'
-                    : ''
+                    : 'text-muted-foreground'
                 }`}
               />
             </Button>
+          ) : (
+            <div />
           )}
+
+          {/* Dropdown menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="icon"
-                className="h-8 w-8 bg-background/95 backdrop-blur-sm"
+                className="h-8 w-8 bg-background/80 backdrop-blur-sm shadow-sm hover:bg-background"
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => window.open(bookmark.url, '_blank')}>
+            <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-zinc-900 text-black dark:text-white border border-border shadow-lg rounded-lg p-1">
+              <DropdownMenuItem
+                onClick={() => window.open(bookmark.url, '_blank')}
+                className="cursor-pointer"
+              >
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Open in new tab
+                <span>Open in new tab</span>
               </DropdownMenuItem>
               {isTrashView ? (
                 <>
-                  <DropdownMenuItem onClick={handleRestore}>
+                  <DropdownMenuItem onClick={handleRestore} className="cursor-pointer">
                     <Undo2 className="mr-2 h-4 w-4" />
-                    Restore
+                    <span>Restore</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handlePermanentDelete}
-                    className="text-destructive focus:text-destructive"
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete permanently
+                    <span>Delete permanently</span>
                   </DropdownMenuItem>
                 </>
               ) : (
-                <DropdownMenuItem
-                  onClick={handleDelete}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Move to Trash
-                </DropdownMenuItem>
+                <>
+                  {onMoveToCollection && collections && collections.length > 0 && (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="cursor-pointer">
+                        <FolderOpen className="mr-2 h-4 w-4" />
+                        <span>Move to Collection</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-white dark:bg-zinc-900 text-black dark:text-white border border-border shadow-lg rounded-lg p-1">
+                        {bookmark.collection_id && (
+                          <DropdownMenuItem
+                            onClick={() => onMoveToCollection(bookmark.id, null)}
+                            className="cursor-pointer text-muted-foreground"
+                          >
+                            Remove from collection
+                          </DropdownMenuItem>
+                        )}
+                        {bookmark.collection_id && collections.length > 0 && (
+                          <DropdownMenuSeparator />
+                        )}
+                        {collections
+                          .filter((c) => c.id !== bookmark.collection_id)
+                          .map((collection) => (
+                            <DropdownMenuItem
+                              key={collection.id}
+                              onClick={() => onMoveToCollection(bookmark.id, collection.id)}
+                              className="cursor-pointer"
+                            >
+                              <FolderOpen className="mr-2 h-4 w-4" />
+                              {collection.name}
+                            </DropdownMenuItem>
+                          ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleDelete}
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    <span>Move to Trash</span>
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
-        {/* Favorite indicator (always visible when favorited) */}
-        {bookmark.is_favorite && !isTrashView && (
-          <div className="absolute top-2 left-2">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 drop-shadow-sm" />
-          </div>
-        )}
       </div>
 
       {/* Content */}
