@@ -406,15 +406,7 @@ export default function BookmarksPage() {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {/* Drag-and-drop overlay */}
-        {isDraggingOver && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-            <div className="flex flex-col items-center gap-2 text-primary">
-              <LinkIcon className="h-10 w-10" />
-              <p className="text-lg font-semibold">Drop link to bookmark it</p>
-            </div>
-          </div>
-        )}
+
         {/* Top Bar */}
         <header className="flex items-center gap-3 border-b border-border px-4 py-3 md:px-6">
           {/* Mobile hamburger */}
@@ -521,8 +513,8 @@ export default function BookmarksPage() {
 
         {/* Bookmark list with drag-and-drop zone */}
         <div
-          className={`flex-1 overflow-auto p-4 md:p-6 relative transition-colors ${
-            isDraggingOver ? 'bg-primary/5' : ''
+          className={`flex-1 overflow-auto p-4 md:p-6 relative transition-all ${
+            isDraggingOver ? 'border-2 border-dashed border-primary rounded-xl bg-primary/5' : 'border-2 border-transparent'
           }`}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
@@ -530,12 +522,9 @@ export default function BookmarksPage() {
           onDrop={handleDrop}
         >
           {isDraggingOver && (
-            <div className="absolute inset-4 border-2 border-dashed border-primary rounded-xl flex items-center justify-center bg-primary/5 z-10 pointer-events-none">
-              <div className="text-center">
-                <LinkIcon className="h-10 w-10 text-primary mx-auto mb-2" />
-                <p className="text-lg font-medium text-primary">Drop link to bookmark</p>
-                <p className="text-sm text-muted-foreground">Release to save this URL</p>
-              </div>
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl pointer-events-none">
+              <LinkIcon className="h-10 w-10 text-primary" />
+              <p className="text-base font-semibold text-primary">Drop link to bookmark it</p>
             </div>
           )}
           <BookmarkList
