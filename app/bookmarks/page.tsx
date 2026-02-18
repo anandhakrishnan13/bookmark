@@ -34,14 +34,13 @@ import {
   List,
 } from "lucide-react";
 import { isValidUrl } from "@/utils/validators";
-import type { Collection } from "@/utils/types";
 
 type ActiveFilter = "all" | "favorites" | "recent" | "trash" | string;
 type SortBy = "date-desc" | "date-asc" | "alpha-asc" | "alpha-desc";
 type ViewMode = "grid" | "list";
 
 export default function BookmarksPage() {
-  const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
   const userId = user?.id ?? null;
 
@@ -423,7 +422,7 @@ export default function BookmarksPage() {
           </Sheet>
 
           {/* Page heading */}
-          <h1 className="text-xl font-semibold truncate">{heading}</h1>
+          <h1 className="text-xl font-semibold truncate mt-3.5 mb-3.5">{heading}</h1>
 
           <div className="flex-1" />
 
