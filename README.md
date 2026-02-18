@@ -19,7 +19,6 @@ Production-grade bookmark management application with real-time synchronization 
 - **Favorites**: Star/unstar bookmarks
 - **Real-time Sync**: Live updates across devices via Supabase Realtime
 - **AI Chatbot**: Gemini-powered assistant for bookmark help
-- **Responsive UI**: Raindrop.io-inspired design with sidebar navigation
 - **Dark/Light Mode**: Full theme support
 - **Search**: Client-side filtering by title/URL
 - **View Modes**: Grid/List toggle with sorting options
@@ -46,29 +45,10 @@ bookmarks: id, user_id, collection_id, title, url,
 ```
 
 **Auto-Delete Trigger (30 Days)**:
-```sql
--- Enable pg_cron extension
-CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Function to delete old trash items
-CREATE OR REPLACE FUNCTION delete_old_trash()
-RETURNS void
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  DELETE FROM bookmarks 
-  WHERE is_deleted = true 
-  AND deleted_at < NOW() - INTERVAL '30 days';
-END;
-$$;
-
--- Schedule daily cleanup at 3 AM UTC
-SELECT cron.schedule(
-  'delete-old-trash',
-  '0 3 * * *',
-  'SELECT delete_old_trash();'
-);
-```
+- Enable pg_cron extension
+- Function to delete old trash items (30 days)
+- Schedule daily cleanup at 3 AM UTC
 
 ## Project Structure
 
@@ -116,6 +96,7 @@ utils/
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+GOOGLE_GENERATIVE_AI_API_KEY
 ```
 
 ## Design Decisions
@@ -127,58 +108,31 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 5. **shadcn/ui Only**: Consistent design system
 6. **Soft Delete**: Trash with 30-day retention capability
 
-## Mistakes Made & Fixed
+## Problems Faced
 
-**1. Sidebar Implementation Iterations**
-- *Mistake*: Initially tried shadcn SidebarProvider with collapsible modes (icon/offcanvas)
-- *Issue*: Complex state management, SidebarTrigger not rendering, unexpected overlay behavior
-- *Fix*: Simplified to plain flexbox layout with fixed sidebar + Sheet for mobile menu
-
-**2. Drag-and-Drop Bugs**
-- *Mistake*: Duplicate link elements rendered during drag operations with conflicting borders
-- *Issue*: Visual glitch where dragged items showed twice with borders
-- *Fix*: Added drag state tracking (`draggedItem` state) with opacity transitions instead of borders
-
-**3. Database Types Generation**
-- *Mistake*: Attempted auto-generation with `npx supabase gen types` without login token
-- *Issue*: Failed with auth error, types file contained only error message
-- *Fix*: Manually created `Database` type interface matching Supabase schema
-
-**4. Demo Mode Overhead**
-- *Mistake*: Created mock data system with `isDemoMode()` checks throughout codebase
-- *Issue*: Conditional logic complexity, `utils/mockData.ts` became maintenance burden
-- *Fix*: Removed all demo code after backend integration complete
-
-**5. Empty State UX**
-- *Mistake*: Static "No bookmarks" text with unclear CTA
-- *Issue*: Users didn't know how to add first bookmark
-- *Fix*: Added prominent centered "Add New Bookmark" button with emoji icon
-
-## Difficulties Faced
-
-**1. TypeScript Strict Mode with shadcn**
-- *Challenge*: `exactOptionalPropertyTypes` flag rejected `checked?: boolean` in DropdownMenuCheckboxItem
-- *Solution*: Conditional prop spreading: `{...(checked !== undefined && { checked })}`
-
-**2. Next.js External Images**
-- *Challenge*: Google favicon service blocked by default security policy
-- *Solution*: Added specific `remotePatterns` config in `next.config.ts` for `www.google.com/s2/favicons`
-
-**3. Real-time Sync Complexity**
-- *Challenge*: Multiple tabs/devices causing race conditions and duplicate updates
+**1. Real-time Sync Complexity**
+- *Issue*: Multiple tabs/devices causing race conditions and duplicate updates
 - *Solution*: Single channel subscription per user with proper cleanup, optimistic updates with rollback
 
-**4. Word-by-Word Streaming Animation**
-- *Challenge*: AI responses needed smooth reveal without blocking UI or memory leaks
-- *Solution*: Custom `useWordStream` hook with `setInterval`, proper cleanup on unmount
+**2. Sidebar Implementation Iterations**
+- *Issue*: shadcn SidebarProvider with collapsible modes caused complex state management and overlay issues
+- *Solution*: Simplified to plain flexbox layout with fixed sidebar + Sheet for mobile menu
 
-**5. Theme Consistency**
-- *Challenge*: Sidebar background color didn't match main content in light/dark modes
-- *Solution*: Updated CSS variables to use `hsl(var(--background))` for seamless visual flow
+**3. TypeScript Strict Mode with shadcn**
+- *Issue*: `exactOptionalPropertyTypes` flag rejected `checked?: boolean` in DropdownMenuCheckboxItem
+- *Solution*: Conditional prop spreading: `{...(checked !== undefined && { checked })}`
 
-**6. Mobile Responsive Layout**
-- *Challenge*: Balancing desktop sidebar (256px fixed) with mobile Sheet overlay
+**4. Mobile Responsive Layout**
+- *Issue*: Balancing desktop sidebar (256px fixed) with mobile Sheet overlay
 - *Solution*: Used `hidden md:flex` for desktop sidebar, Sheet component for mobile hamburger menu
+
+**5. Drag-and-Drop Bugs**
+- *Issue*: Duplicate link elements rendered during drag operations with conflicting borders
+- *Solution*: Added drag state tracking (`draggedItem` state) with opacity transitions instead of borders
+
+**6. Database Types Generation**
+- *Issue*: Auto-generation with `npx supabase gen types` failed without login token
+- *Solution*: Manually created `Database` type interface matching Supabase schema
 
 ## Compliance
 
@@ -191,27 +145,27 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 | ESLint | ✅ Zero warnings |
 | shadcn/ui | ✅ All UI from shadcn |
 
-## Status
-
-**Current State**: ✅ Production Ready
-
-**Last Updated**: Feb 18, 2026
-
-**Lines of Code**: ~1200 (TypeScript/TSX)
-
-**Features**: Authentication, Bookmarks, Collections, Favorites, Trash, AI Chat, Dark Mode, Real-time Sync, Responsive Design
+## Features 
+ - *Authentication*
+ - *Bookmarks* 
+ - *Collections* 
+ - *Favorites*
+ - *Trash*
+ - *AI Chat*
+ - *Dark Mode*
+ - *Real-time Sync* 
+ - *Responsive Design*
 
 ## Quick Start
 
 ```bash
 npm install
-# Add .env.local with Supabase credentials
+# Add .env with Supabase credentials
 npm run dev
 ```
 
 ## Future Enhancements
 
-- Auto-delete trash after 30 days
 - Bulk actions (multi-select)
 - Keyboard shortcuts
 - Bookmark import/export

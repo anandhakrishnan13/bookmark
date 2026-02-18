@@ -30,12 +30,12 @@ User clicks chat icon
 
 ## Tech Stack
 
-| Component        | Technology                           | Reason                                              |
-| ---------------- | ------------------------------------ | --------------------------------------------------- |
-| LLM              | Google Gemini 2.0 Flash              | Free tier (1,500 req/day), fast, large context      |
+| Component        | Technology                              | Reason                                              |
+| ---------------- | --------------------------------------- | --------------------------------------------------- |
+| LLM              | Google Gemini 2.0 Flash                 | Free tier (1,500 req/day), fast, large context      |
 | AI Framework     | Vercel AI SDK (`ai` + `@ai-sdk/google`) | Built-in `useChat` hook, streaming, Next.js native  |
-| Content Fetching | Jina AI Reader                       | Free, returns clean markdown, no API key needed     |
-| UI               | shadcn/ui + Tailwind CSS             | Consistent with existing app design                 |
+| Content Fetching | Jina AI Reader                          | Free, returns clean markdown, no API key needed     |
+| UI               | shadcn/ui + Tailwind CSS                | Consistent with existing app design                 |
 
 ---
 
@@ -51,14 +51,14 @@ User clicks chat icon
 | `components/chat/ChatPanel.tsx`     | Main chat panel (3 states)       |
 | `components/chat/MessageList.tsx`   | Message rendering                |
 | `components/chat/MessageInput.tsx`  | Input field with send            |
-| `AI_CHATBOT_SETUP.md`              | This file                        |
+| `AI_CHATBOT_SETUP.md`               | This file                        |
 
 ### Modified Files (2)
 
 | File                      | Change                                     |
 | ------------------------- | ------------------------------------------ |
 | `app/bookmarks/page.tsx`  | Add `<ChatBubble>` component               |
-| `.env.local`              | Add `GOOGLE_GENERATIVE_AI_API_KEY`         |
+| `.env`                    | Add `GOOGLE_GENERATIVE_AI_API_KEY`         |
 
 ---
 
@@ -73,13 +73,13 @@ User clicks chat icon
    ├─────────────────────────────┤
    │                             │
    │  Select a bookmark to       │
-   │  chat about:               │
+   │  chat about:                │
    │                             │
-   │  ┌─────────────────────┐   │
-   │  │ Choose a site...  ▼ │   │
-   │  └─────────────────────┘   │
+   │  ┌─────────────────────┐    │
+   │  │ Choose a site...  ▼ │    │
+   │  └─────────────────────┘    │
    │                             │
-   │  ⏳ Temporary chat          │
+   │  ⏳ Temporary chat         │
    │  Messages are not saved     │
    └─────────────────────────────┘
 
@@ -120,6 +120,7 @@ User clicks chat icon
    └─────────────────────────────┘
 
 6. Off-topic question:
+   ┌─────────────────────────────┐
    │            What's the     👤│
    │            weather today?   │
    │                             │
@@ -128,6 +129,7 @@ User clicks chat icon
    │     github.com. Try asking  │
    │     about the site's        │
    │     features or content!    │
+   └─────────────────────────────┘
 
 7. User clicks ✕ → panel closes, all messages cleared
 ```
