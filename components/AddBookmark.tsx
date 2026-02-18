@@ -28,10 +28,17 @@ interface AddBookmarkProps {
   collections?: Collection[] | undefined
   defaultCollectionId?: string | undefined
   hideCollectionSelector?: boolean | undefined
+  open?: boolean | undefined
+  onOpenChange?: ((open: boolean) => void) | undefined
 }
 
-export function AddBookmark({ onAdd, collections, defaultCollectionId, hideCollectionSelector }: AddBookmarkProps) {
-  const [open, setOpen] = useState(false)
+export function AddBookmark({ onAdd, collections, defaultCollectionId, hideCollectionSelector, open: controlledOpen, onOpenChange: controlledOnOpenChange }: AddBookmarkProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const setOpen = (value: boolean) => {
+    setInternalOpen(value)
+    controlledOnOpenChange?.(value)
+  }
+  const open = controlledOpen ?? internalOpen
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [collectionId, setCollectionId] = useState<string>(defaultCollectionId ?? 'none')

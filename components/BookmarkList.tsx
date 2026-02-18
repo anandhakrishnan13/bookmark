@@ -17,6 +17,8 @@ interface BookmarkListProps {
   isTrashView?: boolean | undefined
   viewMode?: 'grid' | 'list' | undefined
   emptyMessage?: string | undefined
+  onAddBookmark?: (() => void) | undefined
+  showAddButton?: boolean | undefined
 }
 
 export function BookmarkList({
@@ -30,7 +32,9 @@ export function BookmarkList({
   loading,
   isTrashView = false,
   viewMode = 'grid',
-  emptyMessage = 'No bookmarks yet. Add your first bookmark to get started!',
+  emptyMessage = 'No bookmarks yet.',
+  onAddBookmark,
+  showAddButton = false,
 }: BookmarkListProps) {
   const getCollectionName = (collectionId: string | null): string | undefined => {
     if (!collectionId || !collections) return undefined
@@ -70,6 +74,41 @@ export function BookmarkList({
   }
 
   if (bookmarks.length === 0) {
+    if (showAddButton && onAddBookmark) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
+          <button
+            onClick={onAddBookmark}
+            className="group flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all duration-200 p-12 cursor-pointer"
+          >
+            <div className="rounded-full bg-muted group-hover:bg-primary/10 transition-colors p-6">
+              <svg
+                className="h-12 w-12 text-muted-foreground group-hover:text-primary transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                Add new bookmarks
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Click to add your first bookmark, or drag a link here
+              </p>
+            </div>
+          </button>
+        </div>
+      )
+    }
+
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <div className="rounded-full bg-muted p-6 mb-4">

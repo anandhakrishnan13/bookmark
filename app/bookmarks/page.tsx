@@ -51,6 +51,7 @@ export default function BookmarksPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("date-desc");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [addBookmarkOpen, setAddBookmarkOpen] = useState(false);
 
   // Data hooks
   const {
@@ -268,13 +269,19 @@ export default function BookmarksPage() {
   const dragCounterRef = useRef(0);
 
   const extractUrlFromDrop = useCallback((e: React.DragEvent): string | null => {
-    // Try text/uri-list first (dragged links)
+    // Firefox tab drag: "url\ntitle" format
+    const mozUrl = e.dataTransfer.getData('text/x-moz-url');
+    if (mozUrl) {
+      const url = mozUrl.split('\n')[0]?.trim();
+      if (url && isValidUrl(url)) return url;
+    }
+    // Chrome/Edge tab drag and dragged links
     const uriList = e.dataTransfer.getData('text/uri-list');
     if (uriList) {
       const firstUrl = uriList.split('\n').find(line => !line.startsWith('#') && line.trim());
       if (firstUrl && isValidUrl(firstUrl.trim())) return firstUrl.trim();
     }
-    // Try text/plain (address bar, plain text URLs)
+    // Address bar drag / plain text URL
     const text = e.dataTransfer.getData('text/plain');
     if (text && isValidUrl(text.trim())) return text.trim();
     return null;
@@ -305,7 +312,7 @@ export default function BookmarksPage() {
     e.preventDefault();
     e.stopPropagation();
     dragCounterRef.current++;
-    if (e.dataTransfer.types.includes('text/uri-list') || e.dataTransfer.types.includes('text/plain')) {
+    if (e.dataTransfer.types.includes('text/x-moz-url') || e.dataTransfer.types.includes('text/uri-list') || e.dataTransfer.types.includes('text/plain')) {
       setIsDraggingOver(true);
     }
   }, []);
@@ -506,6 +513,8 @@ export default function BookmarksPage() {
               collections={collections}
               defaultCollectionId={activeCollectionId ?? undefined}
               hideCollectionSelector={activeCollectionId !== null}
+              open={addBookmarkOpen}
+              onOpenChange={setAddBookmarkOpen}
             />
           )}
         </header>
@@ -540,6 +549,8 @@ export default function BookmarksPage() {
             loading={bookmarksLoading}
             isTrashView={isTrashView}
             viewMode={viewMode}
+            showAddButton={!searchQuery && !isTrashView && activeFilter !== 'recent'}
+            onAddBookmark={() => setAddBookmarkOpen(true)}
             emptyMessage={
               searchQuery
                 ? "No bookmarks match your search."
@@ -549,7 +560,7 @@ export default function BookmarksPage() {
                 ? "No favorite bookmarks yet. Star some bookmarks to see them here."
                 : activeFilter === "recent"
                 ? "No recent bookmarks."
-                : "No bookmarks yet. Add your first bookmark above."
+                : "No bookmarks yet."
             }
           />
         </div>
