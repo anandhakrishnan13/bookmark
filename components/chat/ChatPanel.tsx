@@ -180,7 +180,9 @@ export function ChatPanel({ bookmarks, onClose }: ChatPanelProps) {
           <MessageList messages={messages} isStreaming={isStreaming} />
           {error && (
             <div className="mx-4 mb-2 px-3 py-2 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-xs">
-              Failed to get a response. {error.message || 'Please try again.'}
+              {error.message?.includes('QUOTA_EXCEEDED')
+                ? 'Token limit exceeded. Please try again later.'
+                : 'Something went wrong. Please try again.'}
             </div>
           )}
           <MessageInput
